@@ -1,0 +1,18 @@
+-iz physical adresa pristupamo direkt sadržaju
+-implementiraj offset(zadnjih 12 bita za offset rezerviši)
+-Većina adresa u tabelama su null adrese
+-prvih 9 bita od 48 koristimo za indeksiranje page tabele(tabele straničenja nivoa 4)
+-Adresa i prvih 9 bita pokazuje na neku drugu tabelu(tabela straničenja nivoa 3)
+-imamo više tabela nivoa tri
+-Samim tim imamo stablo
+-U svim tabelama nivoa tri koristimo takođe adrese od naređenih 9 bita (od 9 do 18)
+-Tabela nivoa tri sa 9 bitnim adresama vodi tabelu nivoa 2 koja takođe sadrži adrese od narednih 9bita( od 18 do 27)
+-sa tabele nivoa 2 idemo na tabelu nivoa 1 i ona sadrži adrese narednih 9 bita
+-sa tabele nivoa 1 idemo direktno na fizičku adresu( na sadržaj)
+-Fizička adresa cijele tabele straničenja se čuva na CR3 registar
+-za projektni ne moramo imati varijablu veličine stranica
+-biće konkretno 78,80,81 na paging.asm file
+-Svaki proces ima sopstveni virtualni adresni prostor
+-ne može se tek tako iz jednog virtuelnog adresnog prostora pristupiti u drugi
+-Koristi mape ili neku drugu strukturu da bi simulirao straničenje( ne pravimo pravi mehanizam straničenja)
+-OP code? (mašinske instrukcije) (nije neophodno raditi preko OP code)
