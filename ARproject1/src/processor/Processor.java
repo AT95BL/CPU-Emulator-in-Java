@@ -7,15 +7,15 @@ import java.util.Scanner;
 
 public class Processor {
 
-    private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;
+    private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;                         // u skladu sa tekstom zadatka..
 
-    private long[] generalPurposeRegisters = new long[NUM_GENERAL_PURPOSE_REGISTERS];
-    private long programCounter = 0;
-    private Memory memory = new Memory();
-    private Cache cache = new Cache();
-    private boolean isRunning = true;
+    private long[] generalPurposeRegisters = new long[NUM_GENERAL_PURPOSE_REGISTERS];   // sizeof(long) = 8[B]
+    private long programCounter = 0;                                                    //  indeksiranje..
+    private Memory memory = new Memory();   //  radna memorija..
+    private Cache cache = new Cache(memory);      //  cache memorija..
+    private boolean isRunning = true;       //  halt yes/no ..
 
-    // Arithmetic Operations
+    // Arithmetical Operations: add, sub, mul, div
     private void add(int destReg, int srcReg) {
         generalPurposeRegisters[destReg] += generalPurposeRegisters[srcReg];
     }
@@ -36,7 +36,7 @@ public class Processor {
         }
     }
 
-    // Logical Operations
+    // Logical Operations: and, or, not, xor, mov, mov
     private void and(int destReg, int srcReg) {
         generalPurposeRegisters[destReg] &= generalPurposeRegisters[srcReg];
     }
@@ -72,10 +72,9 @@ public class Processor {
     }
 
 
-    // Branching Instructions
-    private void jmp(long targetAddress) {
-        programCounter = targetAddress;
-    }
+    // Branching Instructions: jump, jump-equal, jump-not-euqal, jump greater-less, jump-less
+
+    private void jmp(long targetAddress) {programCounter = targetAddress;}
 
     private void je(long targetAddress, int srcReg1, int srcReg2) {
         if (generalPurposeRegisters[srcReg1] == generalPurposeRegisters[srcReg2]) {
@@ -184,6 +183,20 @@ public class Processor {
         return cache.getCacheLevel(address);
     }
 
+    // Method to print the processor state
+    private void printProcessorState() {
+        System.out.println("======= Processor State =======");
+        System.out.println("Program Counter (PC): " + programCounter);
+        System.out.println("General Purpose Registers:");
+        for (int i = 0; i < NUM_GENERAL_PURPOSE_REGISTERS; i++) {
+            System.out.println("R" + i + ": " + generalPurposeRegisters[i]);
+        }
+        System.out.println("Zero Flag: " + zeroFlag);
+        System.out.println("Greater Than Flag: " + greaterThanFlag);
+        System.out.println("Less Than Flag: " + lessThanFlag);
+        System.out.println("===============================");
+    }
+
     // Main execution loop
     public void run() {
         while (isRunning) {
@@ -196,8 +209,15 @@ public class Processor {
             // Increment program counter to point to the next instruction
             programCounter++;
 
-            // For simplicity, you may want to add a delay here to simulate clock cycles
-            // For example: Thread.sleep(100);
+            // Print processor state after each instruction
+            printProcessorState();
+
+            try{
+                Thread.sleep(100);
+            }catch(InterruptedException ex){
+                ex.printStackTrace();
+                halt();
+            }
         }
     }
 
@@ -265,7 +285,8 @@ public class Processor {
                 halt();
                 break;
             default:
-                // Handle unrecognized opcode or implement additional instructions
+                System.out.println("Unrecognized opcode..:( it's time to halt..");
+                halt();
                 break;
         }
     }

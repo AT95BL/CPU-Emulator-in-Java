@@ -11,10 +11,7 @@ public class Memory {
         initializeMemory();
     }
 
-    private void initializeMemory() {
-        // Initialize memory with default values or leave it empty
-        // ...
-    }
+    private void initializeMemory() {}
 
     // Public method to read from a virtual address
     public byte readFromVirtualAddress(long virtualAddress) {

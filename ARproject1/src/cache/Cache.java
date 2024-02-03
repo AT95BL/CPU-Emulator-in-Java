@@ -3,6 +3,9 @@ package cache;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Arrays;
+
+import memory.Memory;
 
 public class Cache {
 
@@ -15,18 +18,20 @@ public class Cache {
     private static final int CACHE_LINE_SIZE = 64; // 64 bytes
 
     // Cache levels
-    private Map<Long, CacheLevel> l1Cache = new HashMap<>();
-    private Map<Long, CacheLevel> l2Cache = new HashMap<>();
-    private Map<Long, CacheLevel> l3Cache = new HashMap<>();
+    private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);
+    private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
+    private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);
 
-    public Cache() {
+    // Reference to the Memory instance
+    private Memory memory;
+
+    // Constructor to initialize Memory instance
+    public Cache(Memory memory) {
+        this.memory = memory;
         initializeCaches();
     }
 
-    private void initializeCaches() {
-        // Initialize caches with default values or leave them empty
-        // ...
-    }
+    private void initializeCaches() {}
 
     // Method to read from cache
     public byte readFromCache(long address) {
@@ -71,15 +76,22 @@ public class Cache {
         return null;
     }
 
-    // Method to read from RAM (placeholder, replace with actual implementation)
+    // Method to read from RAM
+    // Method to read from RAM
     private byte[] readFromRAM(long address) {
-        // Placeholder, replace with actual implementation to read from RAM
-        return new byte[]{};
+        // Use the Memory instance to read from virtual address
+        int cacheLineSize = CACHE_LINE_SIZE;
+        byte[] dataFromRAM = new byte[cacheLineSize];
+        for (int i = 0; i < cacheLineSize; i++) {
+            dataFromRAM[i] = memory.readFromVirtualAddress(address + i);
+        }
+        return dataFromRAM;
     }
 
-    // Method to write to RAM (placeholder, replace with actual implementation)
+    // Method to write to RAM
     private void writeToRAM(long address, byte data) {
-        // Placeholder, replace with actual implementation to write to RAM
+        // Use the Memory instance to write to virtual address
+        memory.writeToVirtualAddress(address, data);
     }
 
     // Method to update caches after a cache miss
@@ -135,6 +147,22 @@ public class Cache {
             public void write(int offset, byte value) {
                 data[offset] = value;
             }
+        }
+    }
+
+    // LRU-based cache class
+    private static class LruCache<K, V> extends LinkedHashMap<K, V> {
+        private static final long serialVersionUID = 1L;
+        private final int maxSize;
+
+        LruCache(int maxSize) {
+            super(maxSize, 0.75f, true);
+            this.maxSize = maxSize;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+            return size() > maxSize;
         }
     }
 }
