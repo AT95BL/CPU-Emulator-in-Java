@@ -22,17 +22,6 @@ public class Cache {
     private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
     private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);
 
-    // after my mentor's message:
-    // Cache levels and sizes
-    private int numCacheLevels;        // Number of cache levels
-    private int[] cacheSizes;          // Cache sizes for each level
-    private int[] associativities;     // Associativities for each level
-    private int cacheLineSize;         // Cache line size
-
-    // Counters for cache hits and misses
-    private int cacheHits = 0;
-    private int cacheMisses = 0;
-
     // Reference to the Memory instance
     private Memory memory;
 
@@ -42,28 +31,13 @@ public class Cache {
         initializeCaches();
     }
 
-    public Cache(Memory memory, int numCacheLevels, int[] cacheSizes, int[] associativities, int cacheLineSize) {
-        this.memory = memory;
-        this.numCacheLevels = numCacheLevels;
-        this.cacheSizes = cacheSizes;
-        this.associativities = associativities;
-        this.cacheLineSize = cacheLineSize;
-        initializeCaches();
-    }
-
     private void initializeCaches() {}
 
     // Method to read from cache
     public byte readFromCache(long address) {
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
-            byte data = cacheLevel.read(address);
-            if (data != 0) {
-                cacheHits++;
-            } else {
-                cacheMisses++;
-            }
-            return data;
+            return cacheLevel.read(address);
         }
         // If cache miss, read from RAM and update caches
         byte[] dataFromRAM = readFromRAM(address);
@@ -76,20 +50,10 @@ public class Cache {
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
             cacheLevel.write(address, data);
-            cacheHits++;
         }
         // If cache miss, write to RAM and update caches
         writeToRAM(address, data);
         updateCaches(address, new byte[]{data});
-    }
-
-    // Method to get cache hit percentage
-    public double getCacheHitPercentage() {
-        int totalAccesses = cacheHits + cacheMisses;
-        if (totalAccesses > 0) {
-            return ((double) cacheHits / totalAccesses) * 100;
-        }
-        return 0;
     }
 
     // Method to get the cache level based on the address
@@ -124,11 +88,6 @@ public class Cache {
 
     // Method to update caches after a cache miss
     private void updateCaches(long address, byte[] data) {
-        // Assuming LRU strategy for simplicity
-        CacheLevel cacheLevel = getCacheLevel(address);
-        if (cacheLevel != null) {
-            cacheLevel.write(address, data[0]);
-        }
     }
 
     // Method to get the index from the address
@@ -195,10 +154,5 @@ public class Cache {
         protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
             return size() > maxSize;
         }
-    }
-
-    public void cacheMissMonitor(){
-        System.out.println("No. of Cache hits: " + this.cacheHits + "\n");
-        System.out.println("No. of Cache misses: " + this.cacheMisses + "\n");
     }
 }
