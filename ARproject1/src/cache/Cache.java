@@ -7,16 +7,16 @@ import java.util.Arrays;
 
 import memory.Memory;
 
+import static org.junit.Assert.assertEquals;
+
 public class Cache {
 
     // Cache levels and sizes
     private static final int L1_CACHE_SIZE = 32 * 1024; // 32 kB
     private static final int L2_CACHE_SIZE = 512 * 1024; // 512 kB
     private static final int L3_CACHE_SIZE = 32 * 1024 * 1024; // 32 MB
-
     // Cache line size
     private static final int CACHE_LINE_SIZE = 64; // 64 bytes
-
     // Cache levels
     private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);
     private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
@@ -32,6 +32,7 @@ public class Cache {
     // Counters for cache hits and misses
     private int cacheHits = 0;
     private int cacheMisses = 0;
+    private int cacheMissesTimes=0; // pa + cacheHits = cacheAccesses
 
     // Reference to the Memory instance
     private Memory memory;
@@ -51,41 +52,95 @@ public class Cache {
         initializeCaches();
     }
 
-    private void initializeCaches() {}
+    private void initializeCaches() {
+        for (int i = 0; i < numCacheLevels; i++) {
+            int cacheSize = cacheSizes[i];
+            int associativity = associativities[i];
+            Map<Long, CacheLevel> cache = switch (i) {
+                case 0 -> new LruCache<>(cacheSize);
+                case 1 -> new LruCache<>(cacheSize);
+                case 2 -> new LruCache<>(cacheSize);
+                default -> throw new IllegalArgumentException("Invalid cache level: " + i);
+            };
+            initializeCacheLevel(cache, cacheSize, associativity);
+            switch (i) {
+                case 0 -> {
+                    l1Cache = cache;
+                    initializeCacheLevel(l1Cache, cacheSize, associativity);
+                }
+                case 1 -> {
+                    l2Cache = cache;
+                    initializeCacheLevel(l2Cache, cacheSize, associativity);
+                }
+                case 2 -> {
+                    l3Cache = cache;
+                    initializeCacheLevel(l3Cache, cacheSize, associativity);
+                }
+                default -> throw new IllegalArgumentException("Invalid cache level: " + i);
+            }
+        }
+    }
+
+    private void initializeCacheLevel(Map<Long, CacheLevel> cache, int cacheSize, int associativity) {
+        int numCacheLines = cacheSize / CACHE_LINE_SIZE;
+        for (long j = 0; j < numCacheLines; j++) {
+            cache.put(j, new CacheLevel());
+        }
+    }
 
     // Method to read from cache
     public byte readFromCache(long address) {
+        System.out.println("Method: readFromCache");
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
+            System.out.println("cacheLevel != 0");
             byte data = cacheLevel.read(address);
             if (data != 0) {
                 cacheHits++;
+                System.out.println(cacheHits);
             } else {
-                cacheMisses++;
+                System.out.println(cacheMisses);
             }
+            System.out.println("Cache Hit!! Data: " + data);
             return data;
         }
+
+        System.out.println("cacheLevel = 0");
+        cacheMisses++;
         // If cache miss, read from RAM and update caches
         byte[] dataFromRAM = readFromRAM(address);
+        String str = "";
+        for(byte s: dataFromRAM){
+            str += s;
+            str += " ";
+        }
+        System.out.println("Cache Miss!! Data read From RAM: " + str);
         updateCaches(address, dataFromRAM);
         return dataFromRAM[getOffset(address)];
     }
 
     // Method to write to cache
     public void writeToCache(long address, byte data) {
+        System.out.println("Write to Cache <address,data>: " + "<" + address + "," + data + ">");
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
+            System.out.println("cacheLevel != 0");
+            System.out.println("Cache Hit!! Data: " + data);
             cacheLevel.write(address, data);
             cacheHits++;
         }
         // If cache miss, write to RAM and update caches
+        System.out.println("cacheLevel = 0");
         writeToRAM(address, data);
         updateCaches(address, new byte[]{data});
+        cacheHits++;
+        cacheMisses++;
     }
 
     // Method to get cache hit percentage
     public double getCacheHitPercentage() {
-        int totalAccesses = cacheHits + cacheMisses;
+        System.out.println("Method: getCacheHitPercentage ");
+        int totalAccesses = cacheHits + cacheMisses; // mozda kao atribut klase? Onda monitorujem procente, a ne ceste pogotke/promasaje..
         if (totalAccesses > 0) {
             return ((double) cacheHits / totalAccesses) * 100;
         }
@@ -94,6 +149,7 @@ public class Cache {
 
     // Method to get the cache level based on the address
     public CacheLevel getCacheLevel(long address) {
+        System.out.println("Method: getCacheLevel");
         long index = getIndex(address);
         if (l1Cache.containsKey(index)) {
             return l1Cache.get(index);
@@ -107,37 +163,46 @@ public class Cache {
 
     // Method to read from RAM
     private byte[] readFromRAM(long address) {
+        System.out.println("Method: readFromRAM");
         // Use the Memory instance to read from virtual address
         int cacheLineSize = CACHE_LINE_SIZE;
         byte[] dataFromRAM = new byte[cacheLineSize];
         for (int i = 0; i < cacheLineSize; i++) {
             dataFromRAM[i] = memory.readFromVirtualAddress(address + i);
         }
+        // cacheMisses++; kakav, jes lud?
+        cacheHits++;
         return dataFromRAM;
     }
 
     // Method to write to RAM
     private void writeToRAM(long address, byte data) {
+        System.out.println("writeToRAM");
         // Use the Memory instance to write to virtual address
         memory.writeToVirtualAddress(address, data);
+        // cacheMisses++; kakav, jes lud?
     }
 
     // Method to update caches after a cache miss
     private void updateCaches(long address, byte[] data) {
+        System.out.println("Method: updateCaches");
         // Assuming LRU strategy for simplicity
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
             cacheLevel.write(address, data[0]);
+            cacheHits++;
         }
     }
 
     // Method to get the index from the address
     private long getIndex(long address) {
+        System.out.println("Method: getIndex");
         return (address / CACHE_LINE_SIZE) % L1_CACHE_SIZE;
     }
 
     // Method to get the offset from the address
     private int getOffset(long address) {
+        System.out.println("Method: getOffset");
         return (int) (address % CACHE_LINE_SIZE);
     }
 
@@ -145,7 +210,6 @@ public class Cache {
     public static class CacheLevel {
         // Use LinkedHashMap to maintain insertion order for LRU
         private Map<Long, CacheLine> cacheLines = new LinkedHashMap<>(16, 0.75f, true);
-
         public byte read(long address) {
             CacheLine cacheLine = cacheLines.get(getLineIndex(address));
             if (cacheLine != null) {
@@ -177,7 +241,6 @@ public class Cache {
             public void write(int offset, byte value) {
                 data[offset] = value;
             }
-
         }
     }
 
@@ -197,8 +260,46 @@ public class Cache {
         }
     }
 
-    public void cacheMissMonitor(){
+    public void cacheMonitor(){
         System.out.println("No. of Cache hits: " + this.cacheHits + "\n");
         System.out.println("No. of Cache misses: " + this.cacheMisses + "\n");
+    }
+
+    @Override
+    public String toString() {
+        return "Cache{" +
+                "l1Cache=" + l1Cache +
+                ", l2Cache=" + l2Cache +
+                ", l3Cache=" + l3Cache +
+                ", numCacheLevels=" + numCacheLevels +
+                ", cacheSizes=" + Arrays.toString(cacheSizes) +
+                ", associativities=" + Arrays.toString(associativities) +
+                ", cacheLineSize=" + cacheLineSize +
+                ", cacheHits=" + cacheHits +
+                ", cacheMisses=" + cacheMisses +
+                 /*", memory=" + memory +*/
+                '}';
+    }
+
+    public static void main(String[] args){
+        Memory memory = new Memory();
+        Cache cache = new Cache(memory);
+
+        // Perform some cache hits and misses
+        long virtualAddress1 = 0x1000;
+        long virtualAddress2 = 0x2000;
+
+        System.out.println("Reading from cache at virtual address 0x1000");
+        cache.readFromCache(virtualAddress1);
+
+        System.out.println("Writing to cache at virtual address 0x2000");
+        cache.writeToCache(virtualAddress2, (byte) 42);
+
+        System.out.println("Reading from cache again at virtual address 0x1000");
+        cache.readFromCache(virtualAddress1);
+
+        // Assert the cache hit percentage
+        System.out.println("Cache hit percentage: " + cache.getCacheHitPercentage());
+        System.out.println(cache);
     }
 }
