@@ -30,5 +30,7 @@ public class Emulator {
         InstructionLoader.loadProgram(memory, "C:" + File.separator + "Users" + File.separator + "AT95" + File.separator + "IdeaProjects" + File.separator + "ARproject1" + File.separator + "src" + File.separator + "utility" + File.separator + "instructions.txt");
         Cache cache = new Cache(memory);
         Processor processor = new Processor(memory, cache);
+        runEmulation(processor);
+
     }
 }
