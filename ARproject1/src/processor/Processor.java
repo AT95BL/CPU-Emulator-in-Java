@@ -6,98 +6,187 @@ import java.util.Scanner;
 import java.io.File;
 import java.io.FileNotFoundException;
 
-public class Processor {
+public class Processor{
+    private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;
+    private  long[] generalPurposeRegisters; // 64-bit general-purpose registers
+    private long programCounter; // 64-bit program counter
+    private Cache cache;
+    private Memory memory;
 
-    private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;                         // u skladu sa tekstom zadatka..
-    private long[] generalPurposeRegisters = new long[NUM_GENERAL_PURPOSE_REGISTERS];   // sizeof(long) = 8[B]
-    private long programCounter = 0;                                                    //  indeksiranje..
-    private Memory memory = new Memory();   //  radna memorija..
-    private Cache cache = new Cache(memory);      //  cache memorija..
-    private boolean isRunning = true;       //  halt yes/no ..
-
-    // Arithmetical Operations: add, sub, mul, div
-    public void add(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] += generalPurposeRegisters[srcReg];
-    }
-    public void sub(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] -= generalPurposeRegisters[srcReg];
-    }
-    public void mul(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] *= generalPurposeRegisters[srcReg];
-    }
-    public void div(int destReg, int srcReg) {
-        if (generalPurposeRegisters[srcReg] != 0) {
-            generalPurposeRegisters[destReg] /= generalPurposeRegisters[srcReg];
-        } else {
-            halt();
-        }
-    }
-
-    // Logical Operations: and, or, not, xor, mov, mov
-    public void and(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] &= generalPurposeRegisters[srcReg];
-    }
-    public void or(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] |= generalPurposeRegisters[srcReg];
-    }
-    public void not(int destReg) {
-        generalPurposeRegisters[destReg] = ~generalPurposeRegisters[destReg];
-    }
-    public void xor(int destReg, int srcReg) {
-        generalPurposeRegisters[destReg] ^= generalPurposeRegisters[srcReg];
-    }
-
-    // Data Transfer Instructions
-   public void mov(int destRegisterIndex, long value) {
-        if (destRegisterIndex >= 0 && destRegisterIndex < NUM_GENERAL_PURPOSE_REGISTERS) {
-            generalPurposeRegisters[destRegisterIndex] = value;
-        } else {
-            halt();
-        }
-    }
-
-    public void mov(int destRegisterIndex, int sourceRegisterIndex) {
-        if (destRegisterIndex >= 0 && destRegisterIndex < NUM_GENERAL_PURPOSE_REGISTERS &&
-                sourceRegisterIndex >= 0 && sourceRegisterIndex < NUM_GENERAL_PURPOSE_REGISTERS) {
-            generalPurposeRegisters[destRegisterIndex] = generalPurposeRegisters[sourceRegisterIndex];
-        } else {
-            halt();
-        }
-    }
-
-    // Branching Instructions: jump, jump-equal, jump-not-euqal, jump greater-less, jump-less
-
-    public void jmp(long targetAddress) {programCounter = targetAddress;}
-
-    public void je(long targetAddress, int srcReg1, int srcReg2) {
-        if (generalPurposeRegisters[srcReg1] == generalPurposeRegisters[srcReg2]) {
-            programCounter = targetAddress;
-        }
-    }
-
-    public void jne(long targetAddress, int srcReg1, int srcReg2) {
-        if (generalPurposeRegisters[srcReg1] != generalPurposeRegisters[srcReg2]) {
-            programCounter = targetAddress;
-        }
-    }
-
-    public void jge(long targetAddress, int srcReg1, int srcReg2) {
-        if (generalPurposeRegisters[srcReg1] >= generalPurposeRegisters[srcReg2]) {
-            programCounter = targetAddress;
-        }
-    }
-
-    public void jl(long targetAddress, int srcReg1, int srcReg2) {
-        if (generalPurposeRegisters[srcReg1] < generalPurposeRegisters[srcReg2]) {
-            programCounter = targetAddress;
-        }
-    }
-
-    // Comparison
+    //  flags
     private boolean zeroFlag;
     private boolean greaterThanFlag;
     private boolean lessThanFlag;
 
+    //  for halting..
+    private boolean isRunning = true;
+
+    public Processor(Memory memory, Cache cache) {
+        this.generalPurposeRegisters = new long[NUM_GENERAL_PURPOSE_REGISTERS];
+        this.programCounter = 0;
+        this.memory = memory;
+        this.cache = cache;
+    }
+
+    public void add(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 + operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void sub(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 - operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void mul(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 * operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void div(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        if (operand2 != 0) {
+            long result = operand1 / operand2;
+            generalPurposeRegisters[destRegister] = result;
+        } else {
+            // Handle division by zero
+        }
+        programCounter += 1;
+    }
+
+    // Logičke operacije
+    public void and(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 & operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void or(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 | operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void xor(int destRegister, int srcRegister1, int srcRegister2) {
+        long operand1 = generalPurposeRegisters[srcRegister1];
+        long operand2 = generalPurposeRegisters[srcRegister2];
+        long result = operand1 ^ operand2;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    public void not(int destRegister, int srcRegister) {
+        long operand = generalPurposeRegisters[srcRegister];
+        long result = ~operand;
+        generalPurposeRegisters[destRegister] = result;
+        programCounter += 1;
+    }
+
+    // Transfer podataka (MOV) s podrškom za direktno i indirektno adresiranje
+    public void mov(int destRegister, long source) {
+        // Direktno adresiranje ??
+        generalPurposeRegisters[destRegister] = source;
+        programCounter += 1;
+    }
+
+    public void mov(int destRegister, int srcRegister) {
+        // Direktno adresiranje
+        generalPurposeRegisters[destRegister] = generalPurposeRegisters[srcRegister];
+        programCounter += 1;
+    }
+
+    public void movFromRam(int destRegister, long address, boolean indirect) {
+        // Indirektno adresiranje
+        if (indirect) {
+            long targetAddress = cache.readFromCache(address);
+            generalPurposeRegisters[destRegister] = memory.readFromVirtualAddress(targetAddress);
+        } else {
+            // Direktno adresiranje
+            generalPurposeRegisters[destRegister] = memory.readFromVirtualAddress(address);
+        }
+        programCounter += 1;
+    }
+
+    public void movToRam(int destRegisterIndex, long memoryAddress, boolean indirect) {
+        if (destRegisterIndex < 0 || destRegisterIndex >= NUM_GENERAL_PURPOSE_REGISTERS) {
+            halt();
+        }
+
+        // Dohvati podatak iz odredišnog registra
+        long dataToMove = generalPurposeRegisters[destRegisterIndex];
+
+        // Razdvoji 64-bitni podatak u osam 8-bitnih vrijednosti
+        for (int i = 0; i < Long.BYTES; i++) {
+            byte dataByte = (byte) (dataToMove >>> (i * Byte.SIZE));
+
+            // Ako je indirektno adresiranje, pročitaj stvarnu adresu iz keš memorije
+            long actualAddress = indirect ? cache.readFromCache(memoryAddress + i) : memoryAddress + i;
+
+            // Pozovi writeToMemory metodu iz Cache klase za pisanje u RAM memoriju
+            cache.writeToRAM(actualAddress, dataByte);
+        }
+        programCounter += 1;
+    }
+
+    public void jmp(long targetAddress, boolean indirect) {
+        // Ako je indirektno grananje, pročitaj stvarnu adresu iz keš memorije
+        long actualAddress = indirect ? cache.readFromCache(targetAddress) : targetAddress;
+
+        // Postavi programski brojač na novu adresu
+        programCounter = actualAddress;
+    }
+
+    public void je(long targetAddress, boolean indirect) {
+        // Proveri da li je uslov ispunjen (jednako)
+        if (zeroFlag) {
+            jmp(targetAddress, indirect);
+        } else {
+            programCounter += 1;
+        }
+    }
+
+    public void jne(long targetAddress, boolean indirect) {
+        // Proveri da li je uslov ispunjen (nije jednako)
+        if (!zeroFlag) {
+            jmp(targetAddress, indirect);
+        } else {
+            programCounter += 1;
+        }
+    }
+
+    public void jge(long targetAddress, boolean indirect) {
+        // Proveri da li je uslov ispunjen (veće ili jednako)
+        if (greaterThanFlag || zeroFlag) {
+            jmp(targetAddress, indirect);
+        } else {
+            programCounter += 1;
+        }
+    }
+
+    public void jl(long targetAddress, boolean indirect) {
+        // Proveri da li je uslov ispunjen (manje)
+        if (!greaterThanFlag && !zeroFlag) {
+            jmp(targetAddress, indirect);
+        } else {
+            programCounter += 1;
+        }
+    }
+
+    // Comparison
     public void setFlags(boolean zero, boolean greaterThan, boolean lessThan) {
         this.zeroFlag = zero;
         this.greaterThanFlag = greaterThan;
@@ -117,25 +206,40 @@ public class Processor {
         }
     }
 
-    // I/O Routines
-    public void readFromKeyboard(int registerIndex) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter a value: ");
-        long value = scanner.nextLong();
-        if (value < 0 || value >= NUM_GENERAL_PURPOSE_REGISTERS) {
-            halt();
+    public void inputChar(int destRegisterIndex) {
+        if (destRegisterIndex < 0 || destRegisterIndex >= NUM_GENERAL_PURPOSE_REGISTERS) {
+            halt(); // Prekid izvršavanja ako je indeks registra neispravan
         }
-        generalPurposeRegisters[registerIndex] = value;
+
+        // Simulacija učitavanja znaka sa tastature
+        Scanner scanner = new Scanner(System.in);
+        char inputChar = scanner.next().charAt(0);
+
+        // Smjesti učitani znak u odredišni registar
+        generalPurposeRegisters[destRegisterIndex] = inputChar;
+        programCounter += 1;
     }
 
-    public void writeToScreen(int registerIndex) {
-        System.out.println("Value in register " + registerIndex + ": " + generalPurposeRegisters[registerIndex]);
+    public void outputChar(int srcRegisterIndex) {
+        if (srcRegisterIndex < 0 || srcRegisterIndex >= NUM_GENERAL_PURPOSE_REGISTERS) {
+            halt(); // Prekid izvršavanja ako je indeks registra neispravan
+        }
+
+        // Simulacija ispisa znaka na ekran
+        char outputChar = (char) generalPurposeRegisters[srcRegisterIndex];
+        System.out.print(outputChar);
+        programCounter += 1;
     }
 
-    // Halt Instruction
-    public void halt() {
-        isRunning = false;
-        System.out.println("HALT instruction encountered. Emulation halted.");
+    public void halt(){
+        this.isRunning = false;
+    }
+
+    public long getGeneralPurposeRegisterValue(int registerIndex) {
+        if (registerIndex < 0 || registerIndex >= NUM_GENERAL_PURPOSE_REGISTERS) {
+            throw new IllegalArgumentException("Neispravan indeks registra");
+        }
+        return generalPurposeRegisters[registerIndex];
     }
 
     // Method to read from memory (using cache)
@@ -176,7 +280,7 @@ public class Processor {
     }
 
     // Method to print the processor state
-    private void printProcessorState() {
+    public void printProcessorState() {
         System.out.println("======= Processor State =======");
         System.out.println("Program Counter (PC): " + programCounter);
         System.out.println("General Purpose Registers:");
@@ -189,443 +293,148 @@ public class Processor {
         System.out.println("===============================");
     }
 
-    // Main execution loop
-    public void run() {
-        while (isRunning) {
-            // Fetch instruction from memory at the current program counter
-            long instruction = readFromMemory(programCounter);
-            // Decode and execute the instruction
-            executeInstruction(instruction);
-            // Increment program counter to point to the next instruction
-            programCounter++;
-            try{
-                Thread.sleep(100);
-            }catch(InterruptedException ex){
-                ex.printStackTrace();
-                halt();
-            }
+    public long fetchInstructionFromMemory(long programCounter) {
+        // Koristi programski brojač za čitanje instrukcije iz memorije
+        byte[] instructionBytes = new byte[4]; // Pretpostavljamo da je svaka instrukcija 4 bajta
+        for (int i = 0; i < 4; i++) {
+            instructionBytes[i] = readFromMemory(programCounter + i);
         }
-        // Print processor state after each instruction
-        printProcessorState();
+
+        // Pretvori niz bajtova u 32-bitni long (instrukciju)
+        long instruction = 0;
+        for (int i = 0; i < 4; i++) {
+            instruction |= (instructionBytes[i] & 0xFFL) << (i * 8);
+        }
+
+        return instruction;
     }
 
-    // Method to execute an instruction
-    public void executeInstruction(long instruction) {
-        // Decode the instruction and perform the corresponding operation
-        int opcode = getOpcode(instruction);
+    public void executeInstruction(long decodedInstruction) {
+        Opcode opcode = extractOpcode(decodedInstruction);
+        int destRegister = extractDestRegister(decodedInstruction);
+        int srcRegister1 = extractSrcRegister1(decodedInstruction);
+        int srcRegister2 = extractSrcRegister2(decodedInstruction);
 
         switch (opcode) {
-            case ADD_OPCODE:
-                System.out.println("ADD_OPCODE");
-                add(getDestReg(instruction), getSrcReg(instruction));
+            case ADD:
+                add(destRegister, srcRegister1, srcRegister2);
                 break;
-            case SUB_OPCODE:
-                System.out.println("SUB_OPCODE");
-                sub(getDestReg(instruction), getSrcReg(instruction));
+            case SUB:
+                sub(destRegister, srcRegister1, srcRegister2);
                 break;
-            case MUL_OPCODE:
-                System.out.println("MUL_OPCODE");
-                mul(getDestReg(instruction), getSrcReg(instruction));
+            case MUL:
+                mul(destRegister, srcRegister1, srcRegister2);
                 break;
-            case DIV_OPCODE:
-                System.out.println("DIV_OPCODE");
-                div(getDestReg(instruction), getSrcReg(instruction));
+            case DIV:
+                div(destRegister, srcRegister1, srcRegister2);
                 break;
-            case AND_OPCODE:
-                System.out.println("AND_OPCODE");
-                and(getDestReg(instruction), getSrcReg(instruction));
+            case AND:
+                and(destRegister, srcRegister1, srcRegister2);
                 break;
-            case OR_OPCODE:
-                System.out.println("OR_OPCODE");
-                or(getDestReg(instruction), getSrcReg(instruction));
+            case OR:
+                or(destRegister, srcRegister1, srcRegister2);
                 break;
-            case NOT_OPCODE:
-                System.out.println("NOT_OPCODE");
-                not(getDestReg(instruction));
+            case XOR:
+                xor(destRegister, srcRegister1, srcRegister2);
                 break;
-            case XOR_OPCODE:
-                System.out.println("XOR_OPCODE");
-                xor(getDestReg(instruction), getSrcReg(instruction));
+            case NOT:
+                not(destRegister, srcRegister1);
                 break;
-            case MOV_VALUE_OPCODE:
-                System.out.println("MOV_VALUE_OPCODE");
-                mov(getDestReg(instruction), getImmediateValue(instruction));
+            case MOV_REG:
+                mov(destRegister, srcRegister1);
                 break;
-            case MOV_REGISTER_OPCODE:
-                System.out.println("MOV_REGISTER_OPCODE");
-                mov(getDestReg(instruction), getSrcReg(instruction));
+            case MOV_IMM:
+                // Assuming immediate value is in the lower 32 bits of the decodedInstruction
+                long immediateValue = decodedInstruction & 0xFFFFFFFFL;
+                mov(destRegister, immediateValue);
                 break;
-            case JMP_OPCODE:
-                System.out.println("JMP_OPCODE");
-                jmp(getTargetAddress(instruction));
+            case MOV_RAM:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long memoryAddress = decodedInstruction & 0xFFFFFFFFL;
+                movFromRam(destRegister, memoryAddress, true);
                 break;
-            case JE_OPCODE:
-                System.out.println("JE_OPCODE");
-                je(getTargetAddress(instruction), getSrcReg(instruction), getSrcReg2(instruction));
+            case JMP:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long jumpAddress = decodedInstruction & 0xFFFFFFFFL;
+                jmp(jumpAddress, true);
                 break;
-            case JNE_OPCODE:
-                System.out.println("JNE_OPCODE");
-                jne(getTargetAddress(instruction), getSrcReg(instruction), getSrcReg2(instruction));
+            case JE:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long jeAddress = decodedInstruction & 0xFFFFFFFFL;
+                je(jeAddress, true);
                 break;
-            case JGE_OPCODE:
-                System.out.println("JGE_OPCODE");
-                jge(getTargetAddress(instruction), getSrcReg(instruction), getSrcReg2(instruction));
+            case JNE:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long jneAddress = decodedInstruction & 0xFFFFFFFFL;
+                jne(jneAddress, true);
                 break;
-            case JL_OPCODE:
-                System.out.println("JL_OPCODE");
-                jl(getTargetAddress(instruction), getSrcReg(instruction), getSrcReg2(instruction));
+            case JGE:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long jgeAddress = decodedInstruction & 0xFFFFFFFFL;
+                jge(jgeAddress, true);
                 break;
-            case CMP_OPCODE:
-                System.out.println("CMP_OPCODE");
-                cmp(getSrcReg(instruction), getSrcReg2(instruction));
+            case JL:
+                // Assuming address is in the lower 32 bits of the decodedInstruction
+                long jlAddress = decodedInstruction & 0xFFFFFFFFL;
+                jl(jlAddress, true);
                 break;
-            case READ_KEYBOARD_OPCODE:
-                System.out.println("READ_KEYBOARD_OPCODE");
-                readFromKeyboard(getDestReg(instruction));
+            case CMP:
+                cmp(srcRegister1, srcRegister2);
                 break;
-            case WRITE_SCREEN_OPCODE:
-                System.out.println("WRITE_SCREEN_OPCODE");
-                writeToScreen(getSrcReg(instruction));
+            case INPUT_CHAR:
+                inputChar(destRegister);
                 break;
-            case HALT_OPCODE:
-                halt();
+            case OUTPUT_CHAR:
+                outputChar(srcRegister1);
                 break;
+            // Add more cases for other instructions as needed
             default:
-                System.out.println("Unrecognized opcode..:( it's time to halt..");
+                // Invalid instruction
                 halt();
-                break;
-        }
-        // Print processor state after each instruction
-        printProcessorState();
-    }
-
-    // Helper methods to extract fields from the instruction
-    private static final int OPCODE_SHIFT = 28; // Example shift for opcode bits
-    private static final int OPCODE_MASK = 0xF; // Example mask for opcode bits
-
-    private static final int DEST_REG_SHIFT = 24; // Example shift for destination register bits
-    private static final int DEST_REG_MASK = 0xF; // Example mask for destination register bits
-
-    private static final int SRC_REG_SHIFT = 20; // Example shift for source register bits
-    private static final int SRC_REG_MASK = 0xF; // Example mask for source register bits
-
-    private static final int IMMEDIATE_VALUE_SHIFT = 0; // Example shift for immediate value bits
-    private static final long IMMEDIATE_VALUE_MASK = 0xFFFFFFFFL; // Example mask for immediate value bits
-
-    private static final int TARGET_ADDRESS_SHIFT = 0; // Example shift for target address bits
-    private static final long TARGET_ADDRESS_MASK = 0xFFFFFFFFL; // Example mask for target address bits
-
-    private static final int SRC_REG2_SHIFT = 16; // Example shift for second source register bits
-    private static final int SRC_REG2_MASK = 0xF; // Example mask for second source register bits
-
-    public int getOpcode(long instruction) {
-        return (int) ((instruction >> OPCODE_SHIFT) & OPCODE_MASK);
-    }
-
-    public int getDestReg(long instruction) {
-        return (int) ((instruction >> DEST_REG_SHIFT) & DEST_REG_MASK);
-    }
-    public int getSrcReg(long instruction) {
-        return (int) ((instruction >> SRC_REG_SHIFT) & SRC_REG_MASK);
-    }
-
-    public long getImmediateValue(long instruction) {
-        return (instruction >> IMMEDIATE_VALUE_SHIFT) & IMMEDIATE_VALUE_MASK;
-    }
-
-    public long getTargetAddress(long instruction) {
-        return (instruction >> TARGET_ADDRESS_SHIFT) & TARGET_ADDRESS_MASK;
-    }
-    public int getSrcReg2(long instruction) {
-        return (int) ((instruction >> SRC_REG2_SHIFT) & SRC_REG2_MASK);
-    }
-
-    // Define opcode constants (replace these with your actual opcode values)
-    private static final int ADD_OPCODE = 1;
-    private static final int SUB_OPCODE = 2;
-    private static final int MUL_OPCODE = 3;
-    private static final int DIV_OPCODE = 4;
-    private static final int AND_OPCODE = 5;
-    private static final int OR_OPCODE = 6;
-    private static final int NOT_OPCODE = 7;
-    private static final int XOR_OPCODE = 8;
-    private static final int MOV_VALUE_OPCODE = 9;
-    private static final int MOV_REGISTER_OPCODE = 10;
-    private static final int JMP_OPCODE = 11;
-    private static final int JE_OPCODE = 12;
-    private static final int JNE_OPCODE = 13;
-    private static final int JGE_OPCODE = 14;
-    private static final int JL_OPCODE = 15;
-    private static final int CMP_OPCODE = 16;
-    private static final int READ_KEYBOARD_OPCODE = 17;
-    private static final int WRITE_SCREEN_OPCODE = 18;
-    private static final int HALT_OPCODE = 19;
-
-    public static void loadProgramFromFile(Processor processor, String filePath) {
-        try {
-            File file = new File(filePath);
-            Scanner scanner = new Scanner(file);
-            int lineNumber = 1; // Initialize line number counter
-            while (scanner.hasNextLine()) {
-                String instructionLine = scanner.nextLine().trim();
-                // Skip empty lines
-                if (instructionLine.isEmpty()) {
-                    continue;
-                }
-                // Parse and load the instruction into memory
-                parseAndLoadInstruction(processor, instructionLine, lineNumber);
-                // Increment line number
-                lineNumber++;
-            }
-            scanner.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         }
     }
 
-    public static void parseAndLoadInstruction(Processor processor, String instructionLine, int lineNumber) {
-        String[] parts = instructionLine.split("\\s+"); // Split by whitespace
-        if (parts.length >= 2) {
-            try {
-                String opcode = parts[0].toUpperCase();
-                int destReg = Integer.parseInt(parts[1]);
+    // Metoda za dekodiranje instrukcije
+    public long decodeInstruction(long instruction) {
+        // Pretpostavljamo da su stariji 8 bitova opcode, a preostalih 56 bitova su registri
+        int opcode = (int) (instruction >> 56);
+        long registers = instruction & 0x00FFFFFFFFFFFFFFL;
 
-                // Check for comments and skip them
-                if (opcode.startsWith(";")) {
-                    return; // Skip comments
-                }
+        // Možete sada raditi nešto sa opcode-om i registrima, na primer, napraviti dekodiranu instrukciju
+        long decodedInstruction = (opcode << 56) | registers;
 
-                switch (opcode) {
-                    case "ADD":
-                        if (parts.length >= 3) {
-                            System.out.println("ADD INSTRUCTION \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.add(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("ADD without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "SUB":
-                        if (parts.length >= 3) {
-                            System.out.println("SUB INSTRUCTION \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.sub(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("SUB without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "MUL":
-                        if (parts.length >= 3) {
-                            System.out.println("MUL INSTRUCTION \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.mul(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("MUL without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "DIV":
-                        if (parts.length >= 3) {
-                            System.out.println("DIV INSTRUCTION \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.div(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("DIV without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "AND":
-                        if (parts.length >= 3) {
-                            System.out.println("ADD INSTRUCTION  \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.and(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("AND without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "OR":
-                        if (parts.length >= 3) {
-                            System.out.println("OR INSTRUCTION  \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.or(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("OR without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "NOT":
-                        System.out.println("NOT INSTRUCTION \n");
-                        processor.not(destReg);
-                        processor.printProcessorState();
-                        break;
-                    case "XOR":
-                        if (parts.length >= 3) {
-                            System.out.println("XOR INSTRUCTION \n");
-                            int srcReg = Integer.parseInt(parts[2]);
-                            processor.xor(destReg, srcReg);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("XOR without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "MOV":
-                        if (parts.length >= 3) {
-                            System.out.println("MOV INSTRUCTION \n");
-                            if (Character.isDigit(parts[2].charAt(0)) || parts[2].charAt(0) == '-') {
-                                // MOV with immediate value
-                                long immediateValue = Long.parseLong(parts[2]);
-                                processor.mov(destReg, immediateValue);
-                                processor.printProcessorState();
-                            } else {
-                                // MOV from register
-                                int srcReg = Integer.parseInt(parts[2]);
-                                processor.mov(destReg, srcReg);
-                                processor.printProcessorState();
-                            }
-                        } else {
-                            System.out.println("MOV without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "JMP":
-                        if (parts.length >= 2) {
-                            System.out.println("JMP INSTRUCTION  \n");
-                            long targetAddress = Long.parseLong(parts[1]);
-                            processor.jmp(targetAddress);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("JMP without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "JE":
-                        if (parts.length >= 4) {
-                            System.out.println("JE INSTRUCTION  \n");
-                            long targetAddress = Long.parseLong(parts[2]);
-                            int srcReg1 = Integer.parseInt(parts[3]);
-                            int srcReg2 = Integer.parseInt(parts[4]);
-                            processor.je(targetAddress, srcReg1, srcReg2);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("JE without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "JNE":
-                        if (parts.length >= 4) {
-                            System.out.println("JNE INSTRUCTION \n");
-                            long targetAddress = Long.parseLong(parts[2]);
-                            int srcReg1 = Integer.parseInt(parts[3]);
-                            int srcReg2 = Integer.parseInt(parts[4]);
-                            processor.jne(targetAddress, srcReg1, srcReg2);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("JNE without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "JGE":
-                        if (parts.length >= 4) {
-                            System.out.println("JGE INSTRUCTION \n");
-                            long targetAddress = Long.parseLong(parts[2]);
-                            int srcReg1 = Integer.parseInt(parts[3]);
-                            int srcReg2 = Integer.parseInt(parts[4]);
-                            processor.jge(targetAddress, srcReg1, srcReg2);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("JGE without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "JL":
-                        if (parts.length >= 4) {
-                            System.out.println("JL INSTRUCTION \n");
-                            long targetAddress = Long.parseLong(parts[2]);
-                            int srcReg1 = Integer.parseInt(parts[3]);
-                            int srcReg2 = Integer.parseInt(parts[4]);
-                            processor.jl(targetAddress, srcReg1, srcReg2);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("JL without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "CMP":
-                        if (parts.length >= 4) {
-                            System.out.println("CMP INSTRUCTION \n");
-                            int srcReg1 = Integer.parseInt(parts[2]);
-                            int srcReg2 = Integer.parseInt(parts[3]);
-                            processor.cmp(srcReg1, srcReg2);
-                            processor.printProcessorState();
-                        } else {
-                            System.out.println("CMP without enough operands at line " + lineNumber);
-                            processor.halt();
-                        }
-                        break;
-                    case "READ_KEYBOARD":
-                        System.out.println("READ_KEYBOARD INSTRUCTION \n");
-                        processor.readFromKeyboard(destReg);
-                        processor.printProcessorState();
-                        break;
-                    case "WRITE_SCREEN":
-                        System.out.println("WRITE_SCREEN INSTRUCTION \n");
-                        processor.writeToScreen(destReg);
-                        processor.printProcessorState();
-                        break;
-                    case "HALT":
-                        processor.halt();
-                        break;
-                    default:
-                        System.out.println("Unrecognized opcode at line " + lineNumber + ": " + opcode);
-                        processor.halt();
-                        break;
-                }
-            } catch (NumberFormatException e) {
-                System.out.println("Error parsing operand at line " + lineNumber + ": " + e.getMessage());
-                processor.halt();
-            }
-        } else {
-            System.out.println("Invalid instruction format at line " + lineNumber + ": " + instructionLine);
-            processor.halt();
-        }
+        return decodedInstruction;
     }
 
-    public void configureCacheManually() {
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.print("Enter the number of cache levels: ");
-        int numCacheLevels = scanner.nextInt();
-
-        int[] cacheSizes = new int[numCacheLevels];
-        int[] associativities = new int[numCacheLevels];
-
-        for (int i = 0; i < numCacheLevels; i++) {
-            System.out.println("Cache Level " + i + ":");
-            System.out.print("Enter the cache size for level " + i + " (in bytes): ");
-            cacheSizes[i] = scanner.nextInt();
-            System.out.print("Enter the associativity for level " + i + ": ");
-            associativities[i] = scanner.nextInt();
-        }
-
-        System.out.print("Enter the cache line size (in bytes): ");
-        int cacheLineSize = scanner.nextInt();
-
-        // Create a Cache instance with the configured parameters
-        cache = new Cache(memory, numCacheLevels, cacheSizes, associativities, cacheLineSize);
-        setCache(cache);
+    // Pomoćna metoda za ekstrakciju opcode-a
+    private Opcode extractOpcode(long decodedInstruction) {
+        // Prvi bajt instrukcije predstavlja opcode
+        int opcodeValue = (int) ((decodedInstruction >> 56) & 0xFF);
+        return Opcode.values()[opcodeValue];
     }
 
-    public void setCache(Cache cache){
-        this.cache = cache;
+    // Pomoćna metoda za ekstrakciju destinacionog registra
+    private int extractDestRegister(long decodedInstruction) {
+        // Sledeći bajt nakon opcode-a
+        return (int) ((decodedInstruction >> 48) & 0xFF);
+    }
+
+    // Pomoćna metoda za ekstrakciju prvog izvornog registra
+    private int extractSrcRegister1(long decodedInstruction) {
+        // Sledeći bajt nakon destinacionog registra
+        return (int) ((decodedInstruction >> 40) & 0xFF);
+    }
+
+    // Pomoćna metoda za ekstrakciju drugog izvornog registra
+    private int extractSrcRegister2(long decodedInstruction) {
+        // Poslednji bajt instrukcije
+        return (int) ((decodedInstruction >> 32) & 0xFF);
+    }
+
+    public long getProgramCounter(){
+        return this.programCounter;
+    }
+    public boolean isRunning(){
+        return this.isRunning;
     }
 }

@@ -162,7 +162,7 @@ public class Cache {
     }
 
     // Method to read from RAM
-    private byte[] readFromRAM(long address) {
+    public byte[] readFromRAM(long address) {
         System.out.println("Method: readFromRAM");
         // Use the Memory instance to read from virtual address
         int cacheLineSize = CACHE_LINE_SIZE;
@@ -176,7 +176,7 @@ public class Cache {
     }
 
     // Method to write to RAM
-    private void writeToRAM(long address, byte data) {
+    public void writeToRAM(long address, byte data) {
         System.out.println("writeToRAM");
         // Use the Memory instance to write to virtual address
         memory.writeToVirtualAddress(address, data);
