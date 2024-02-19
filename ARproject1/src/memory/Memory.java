@@ -32,9 +32,6 @@ public class Memory {
     // Public method to write to a virtual address | 15.02.2024
     public void writeToVirtualAddress(long virtualAddress, byte data) {
 
-        System.out.println("Argument Virtual Address: " + virtualAddress);
-        System.out.println("Argument Data: " + data);
-
         MemoryPage page = translateVirtualToPhysical(virtualAddress);
         System.out.println("Page(translateVirtualToPhysical): " + page);
 
@@ -124,17 +121,4 @@ public class Memory {
                 '}';
     }
 
-    /*  15.02.2024
-    public static void main(String[] args){
-        Memory memory = new Memory();
-        long virtualAddress = 0x123456789ABCDEFL;
-        byte testData = 42;
-
-        memory.writeToVirtualAddress(virtualAddress, testData);
-        byte readData = memory.readFromVirtualAddress(virtualAddress);
-
-        System.out.println("Expected: " + testData);
-        System.out.println("Actual: " + readData);
-    }
-    */
 }
