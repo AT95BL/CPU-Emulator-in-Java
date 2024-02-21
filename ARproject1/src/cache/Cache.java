@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
 
 import memory.Memory;
 
@@ -18,11 +20,11 @@ public class Cache {
     // Cache line size
     private static final int CACHE_LINE_SIZE = 64; // 64 bytes
     // Cache levels
-    private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);
-    private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
-    private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);
+    // private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);
+    // private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
+    // private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);
+    private List<Map<Long, CacheLevel>> cacheLevels = new ArrayList<>();
 
-    // after my mentor's message:
     // Cache levels and sizes
     private int numCacheLevels;        // Number of cache levels
     private int[] cacheSizes;          // Cache sizes for each level
@@ -52,6 +54,7 @@ public class Cache {
         initializeCaches();
     }
 
+    /*
     private void initializeCaches() {
         for (int i = 0; i < numCacheLevels; i++) {
             int cacheSize = cacheSizes[i];
@@ -80,6 +83,17 @@ public class Cache {
             }
         }
     }
+    */
+
+    private void initializeCaches() {
+        for (int i = 0; i < numCacheLevels; i++) {
+            int cacheSize = cacheSizes[i];
+            int associativity = associativities[i];
+            Map<Long, CacheLevel> cache = new LruCache<>(cacheSize);
+            initializeCacheLevel(cache, cacheSize, associativity);
+            cacheLevels.add(cache);
+        }
+    }
 
     private void initializeCacheLevel(Map<Long, CacheLevel> cache, int cacheSize, int associativity) {
         int numCacheLines = cacheSize / CACHE_LINE_SIZE;
@@ -93,16 +107,22 @@ public class Cache {
         System.out.println("Method: readFromCache");
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
-            System.out.println("cacheLevel != 0");
-            byte data = cacheLevel.read(address);
-            if (data != 0) {
-                cacheHits++;
-                System.out.println(cacheHits);
-            } else {
-                System.out.println(cacheMisses);
+            try {
+                byte data = cacheLevel.read(address);
+                if (data != 0) {
+                    cacheHits++;
+                    System.out.println(cacheHits);
+                } else {
+                    System.out.println(cacheMisses);
+                }
+                System.out.println("Cache Hit!! Data: " + data);
+                return data;
+            } catch (IllegalStateException e) {
+                // Uhvatite izuzetak i postupite prema potrebi
+                System.err.println("Exception caught: " + e.getMessage());
+                // Dodajte odgovarajuće ponašanje, na primer, ispisivanje poruke o grešci ili bacanje dalje
+                return 0; // Vrati neki podrazumevani rezultat ili obradi drugačije
             }
-            System.out.println("Cache Hit!! Data: " + data);
-            return data;
         }
 
         System.out.println("cacheLevel = 0");
@@ -148,6 +168,7 @@ public class Cache {
     }
 
     // Method to get the cache level based on the address
+    /*
     public CacheLevel getCacheLevel(long address) {
         System.out.println("Method: getCacheLevel");
         long index = getIndex(address);
@@ -160,6 +181,16 @@ public class Cache {
         }
         return null;
     }
+    */
+    public CacheLevel getCacheLevel(long address) {
+        for (Map<Long, CacheLevel> cache : cacheLevels) {
+            if (cache.containsKey(address)) {
+                return cache.get(address);
+            }
+        }
+        return null;
+    }
+
 
     // Method to read from RAM
     public byte[] readFromRAM(long address) {
@@ -225,6 +256,10 @@ public class Cache {
         }
 
         private long getLineIndex(long address) {
+            if (cacheLines.isEmpty()) {
+                // Ako je cacheLines prazna, dodajte bar jednu liniju
+                cacheLines.put(0L, new CacheLine());
+            }
             return (address / CACHE_LINE_SIZE) % cacheLines.size();
         }
 
@@ -267,6 +302,28 @@ public class Cache {
 
     @Override
     public String toString() {
+        StringBuilder result = new StringBuilder("Cache{");
+
+        // Iterirajte kroz sve keš nivoe
+        for (int i = 0; i < numCacheLevels; i++) {
+            result.append("l").append(i + 1).append("Cache=").append(cacheLevels.get(i)).append(", ");
+        }
+
+        // Dodajte preostale informacije
+        result.append("numCacheLevels=").append(numCacheLevels)
+                .append(", cacheSizes=").append(Arrays.toString(cacheSizes))
+                .append(", associativities=").append(Arrays.toString(associativities))
+                .append(", cacheLineSize=").append(cacheLineSize)
+                .append(", cacheHits=").append(cacheHits)
+                .append(", cacheMisses=").append(cacheMisses)
+                .append(/*", memory=" + memory +*/ '}');
+
+        return result.toString();
+    }
+
+    /*
+    * @Override
+    public String toString() {
         return "Cache{" +
                 "l1Cache=" + l1Cache +
                 ", l2Cache=" + l2Cache +
@@ -277,29 +334,7 @@ public class Cache {
                 ", cacheLineSize=" + cacheLineSize +
                 ", cacheHits=" + cacheHits +
                 ", cacheMisses=" + cacheMisses +
-                 /*", memory=" + memory +*/
+                 //", memory=" + memory +
                 '}';
-    }
-
-    public static void main(String[] args){
-        Memory memory = new Memory();
-        Cache cache = new Cache(memory);
-
-        // Perform some cache hits and misses
-        long virtualAddress1 = 0x1000;
-        long virtualAddress2 = 0x2000;
-
-        System.out.println("Reading from cache at virtual address 0x1000");
-        cache.readFromCache(virtualAddress1);
-
-        System.out.println("Writing to cache at virtual address 0x2000");
-        cache.writeToCache(virtualAddress2, (byte) 42);
-
-        System.out.println("Reading from cache again at virtual address 0x1000");
-        cache.readFromCache(virtualAddress1);
-
-        // Assert the cache hit percentage
-        System.out.println("Cache hit percentage: " + cache.getCacheHitPercentage());
-        System.out.println(cache);
-    }
+        }*/
 }

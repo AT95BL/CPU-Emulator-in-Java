@@ -8,7 +8,7 @@ import java.io.FileNotFoundException;
 
 public class Processor{
     private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;
-    private  long[] generalPurposeRegisters; // 64-bit general-purpose registers
+    public  long[] generalPurposeRegisters; // 64-bit general-purpose registers
     private long programCounter; // 64-bit program counter
     private Cache cache;
     private Memory memory;
@@ -147,7 +147,8 @@ public class Processor{
         long actualAddress = indirect ? cache.readFromCache(targetAddress) : targetAddress;
 
         // Postavi programski brojač na novu adresu
-        programCounter = actualAddress;
+        //programCounter = actualAddress;
+        setProgramCounter(actualAddress);
     }
 
     public void je(long targetAddress, boolean indirect) {
@@ -293,7 +294,7 @@ public class Processor{
         System.out.println("===============================");
     }
 
-    public long fetchInstructionFromMemory(long programCounter) {
+   public long fetchInstructionFromMemory(long programCounter) {
         // Koristi programski brojač za čitanje instrukcije iz memorije
         byte[] instructionBytes = new byte[4]; // Pretpostavljamo da je svaka instrukcija 4 bajta
         for (int i = 0; i < 4; i++) {
@@ -305,7 +306,6 @@ public class Processor{
         for (int i = 0; i < 4; i++) {
             instruction |= (instructionBytes[i] & 0xFFL) << (i * 8);
         }
-
         return instruction;
     }
 
@@ -434,7 +434,34 @@ public class Processor{
     public long getProgramCounter(){
         return this.programCounter;
     }
+
+    public void setProgramCounter(long programCounter){
+        this.programCounter = programCounter;
+    }
     public boolean isRunning(){
         return this.isRunning;
+    }
+
+    public void setZeroFlag(boolean zeroFlag){
+        this.zeroFlag = zeroFlag;
+    }
+
+    public boolean isZeroFlag(){
+        return this.zeroFlag;
+    }
+
+    public void setLessThanFlag(boolean lessThanFlag){
+        this.lessThanFlag = lessThanFlag;
+    }
+    public boolean isLessThanFlag(){
+        return this.lessThanFlag;
+    }
+
+    public void setGreaterThanFlag(boolean greaterThanFlag){
+        this.greaterThanFlag = greaterThanFlag;
+    }
+
+    public boolean isGreaterThanFlag(){
+        return this.greaterThanFlag;
     }
 }

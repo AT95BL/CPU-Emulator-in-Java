@@ -73,8 +73,6 @@ public class Memory {
         return null; // Return null to indicate a failure in translation
     }
 
-
-
     // Method to get the offset from a virtual address
     public int getOffset(long virtualAddress) {
         return (int) (virtualAddress & 0xFFF);
@@ -120,5 +118,4 @@ public class Memory {
                 "pageTableLevel4=" + pageTableLevel4 +
                 '}';
     }
-
 }
