@@ -28,13 +28,13 @@ public class Cache {
     // Cache levels and sizes
     private int numCacheLevels;        // Number of cache levels
     private int[] cacheSizes;          // Cache sizes for each level
-    private int[] associativities;     // Associativities for each level
+    private int[] associativities;     // Associativities for each level, Ovo je niz koji sadrži asocijativnosti za svaki nivo keša. Asocijativnost se odnosi na to koliko linija keša može držati podatke koji se mapiraju na isti indeks. Na primer, ako je asocijativnost za L1, L2 i L3 postavljena na 2, 4 i 8 redom, to znači da su ovi nivoi keša dvostruko,četvorostruko, odnosno osmostruko asocijativni.
     private int cacheLineSize;         // Cache line size
 
     // Counters for cache hits and misses
     private int cacheHits = 0;
     private int cacheMisses = 0;
-    private int cacheMissesTimes=0; // pa + cacheHits = cacheAccesses
+    // private int cacheMissesTimes=0; // pa + cacheHits = cacheAccesses
 
     // Reference to the Memory instance
     private Memory memory;
@@ -104,7 +104,6 @@ public class Cache {
 
     // Method to read from cache
     public byte readFromCache(long address) {
-        System.out.println("Method: readFromCache");
         CacheLevel cacheLevel = getCacheLevel(address);
         if (cacheLevel != null) {
             try {
@@ -118,10 +117,8 @@ public class Cache {
                 System.out.println("Cache Hit!! Data: " + data);
                 return data;
             } catch (IllegalStateException e) {
-                // Uhvatite izuzetak i postupite prema potrebi
                 System.err.println("Exception caught: " + e.getMessage());
-                // Dodajte odgovarajuće ponašanje, na primer, ispisivanje poruke o grešci ili bacanje dalje
-                return 0; // Vrati neki podrazumevani rezultat ili obradi drugačije
+                return 0;
             }
         }
 
@@ -288,11 +285,46 @@ public class Cache {
             super(maxSize, 0.75f, true);
             this.maxSize = maxSize;
         }
+        /*
+            `super(maxSize, 0.75f, true)` poziva konstruktor nadređene klase, odnosno konstruktor `LinkedHashMap` klase.
+            Evo šta svaki od parametara znači:
+            1. **maxSize**:
+                Ovaj parametar predstavlja maksimalnu veličinu keša.
+                Kada broj unosa u kešu dostigne ovu vrednost,
+                primenjuje se LRU strategija kako bi se oslobodilo mesto za nove unose.
+            2. **0.75f**:
+                Ovaj parametar predstavlja faktor opterećenja (load factor) koji se koristi za
+                automatsko povećanje veličine keša kada se dostigne određeni procenat od maksimalne veličine.
+                U ovom slučaju, kada se keš napuni 75%, veličina će biti automatski povećana.
+            3. **true**:
+                Ovaj parametar označava da se koristi poredak uvođenja (access order) umesto podrazumevanog poretka uvođenja.
+                Kod LRU keša,
+                želimo pratiti redosled pristupa elementima kako bismo mogli tačno odrediti koji elementi su najmanje korišćeni i ukloniti ih prilikom potrebe. Postavljanjem ovog parametra na `true`, keš će pratiti redosled pristupa prilikom uvođenja novih elemenata.
+            Dakle, poziv `super(maxSize, 0.75f, true)`
+            inicijalizuje `LinkedHashMap` sa specifičnim postavkama koje su prilagođene LRU strategiji.
+         */
 
         @Override
         protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
             return size() > maxSize;
         }
+        /*
+            Ova metoda `removeEldestEntry` je preklopljeni (overridden)
+            metod u klasi `LruCache` koja proširuje klasu `LinkedHashMap`.
+            Ovaj metod je od suštinskog značaja za implementaciju LRU (Least Recently Used) keša.
+            Evo šta ova metoda radi:
+                1. **Map.Entry<K, V> eldest**:
+                    Parametar `eldest` predstavlja najstariji unos (entry) u kešu.
+                    "Najstariji" se odnosi na unos koji je bio najmanje korišćen ili koji je bio u kešu najduže vreme.
+                2. **return size() > maxSize**:
+                Ova linija koda proverava da li je trenutna veličina keša (`size()`) veća od maksimalne veličine (`maxSize`).
+                Ako je to tačno, metoda vraća `true`, što znači da će najstariji unos biti uklonjen iz keša.
+
+            Ova provera je ključna za implementaciju LRU strategije.
+            Kada keš dostigne svoju maksimalnu veličinu, ova metoda će biti pozvana pre nego što se novi unos doda u keš.
+            Ako vrati `true`, to znači da je keš premašio svoju maksimalnu veličinu i najstariji unos će biti uklonjen,
+            praveći mesto za novi unos. Ako vrati `false`, novi unos će biti dodat u keš, a najstariji će ostati nepromenjen.
+         */
     }
 
     public void cacheMonitor(){
