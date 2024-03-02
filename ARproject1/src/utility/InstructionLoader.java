@@ -7,7 +7,9 @@ import java.io.IOException;
 import memory.Memory;
 public class InstructionLoader {
     public static void loadProgram(Memory memory, String filePath) {
+
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+
             String line;
             long address = 0; // Adresa u memoriji gdje ćemo pohranjivati instrukcije
 
