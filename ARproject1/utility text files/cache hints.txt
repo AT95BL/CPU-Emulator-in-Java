@@ -1,0 +1,14 @@
+Na x86-64 arhitekturi, svako procesorsko jezgro ima:
+L1-data cache, koji kešira podatke
+L1-instruction cache, koji kešira instrukcije
+L2-cache, koji kešira i podatke i instrukcije
+sva procesorska jezgra međusobno dijele L3-cache
+
+Kada procesor traži neki podatak/instrukciju prvo se provjerava da li je ta instrukcija u L1-cache,
+ako nije onda se traži iz L2-cache, ako ni tu nije onda se traži u L3-cache, a ako nije ni tu onda će se tražiti
+iz glavne memorije (ako nije ni tu onda će se tražiti iz sekundarne memorije ..što za ovaj projektni zadatak nije od interesa)
+
+L1 32[KB]
+L2 512[KB]
+L3 32[MB]
+RAM 32[GB]

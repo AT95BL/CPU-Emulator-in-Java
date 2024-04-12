@@ -18,33 +18,71 @@ public class Cache {
     private static final int L2_CACHE_SIZE = 512 * 1024; // 512 kB
     private static final int L3_CACHE_SIZE = 32 * 1024 * 1024; // 32 MB
     // Cache line size
+
+   /*
+   *    Cache line je osnovna jedinica podataka koja se čuva u kešu.
+   *    To je kontinuirani blok memorije unutar keša koji se koristi za čuvanje podataka koji su nedavno pristupani
+   *    ili se očekuje da će uskoro biti pristupljeni.
+   *    Cache line veličina određuje koliko podataka se može čuvati u jednoj liniji keša.
+   */
     private static final int CACHE_LINE_SIZE = 64; // 64 bytes
-    // Cache levels
-    // private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);
-    // private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);
-    // private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);
-    private List<Map<Long, CacheLevel>> cacheLevels = new ArrayList<>();
+    // Cache levels                                                             --from the old systems version
+    // private Map<Long, CacheLevel> l1Cache = new LruCache<>(L1_CACHE_SIZE);   --from the old systems version
+    // private Map<Long, CacheLevel> l2Cache = new LruCache<>(L2_CACHE_SIZE);   --from the old systems version
+    // private Map<Long, CacheLevel> l3Cache = new LruCache<>(L3_CACHE_SIZE);   --from the old systems version
+
+    // Lista cacheLevels predstavlja hijerarhiju keš nivoa.
+    // Svaki keš nivo je predstavljen mapom gde su ključevi adrese (tipa Long) i vrednosti CacheLevel objekti.
+    // Ova struktura omogućava organizaciju i efikasno upravljanje keširanim podacima na različitim nivoima keš memorije.
+    // Korišćenje liste omogućava lako proširivanje sistema dodavanjem novih keš nivoa.
+    private List<Map<Long, CacheLevel>> cacheLevels = new ArrayList<>();    // index-cachelevel 0-L1,   1-L2,   2-L3
 
     // Cache levels and sizes
-    private int numCacheLevels;        // Number of cache levels
+    private int numCacheLevels;        // Number of cache levels: 1, 2 or 3 ..
     private int[] cacheSizes;          // Cache sizes for each level
-    private int[] associativities;     // Associativities for each level, Ovo je niz koji sadrži asocijativnosti za svaki nivo keša. Asocijativnost se odnosi na to koliko linija keša može držati podatke koji se mapiraju na isti indeks. Na primer, ako je asocijativnost za L1, L2 i L3 postavljena na 2, 4 i 8 redom, to znači da su ovi nivoi keša dvostruko,četvorostruko, odnosno osmostruko asocijativni.
+
+    /*
+        associativities kesa se odnosi na koncept koji opisuje koliko linija keša može držati podatke koji se
+        mapiraju na isti indeks.
+
+        Ovaj koncept je povezan sa načinom na koji se podaci smeštaju u keš,
+        odnosno kako se pristupa podacima koji se nalaze na istom mestu unutar keša.
+
+        U opštem smislu, asocijativnost kesa se može podeliti na tri glavne vrste:
+
+    *   Direktno mapiranje (Direct Mapped):
+            Svaka linija keša je mapirana na jedno određeno mesto u kešu.
+    *       To znači da svaka adresa iz memorije može biti smeštena samo u jednu određenu liniju u kešu.
+
+    *   Asocijativno mapiranje (Associative Mapping):
+            Svaka adresa iz memorije može biti smeštena u bilo koju liniju keša.
+    *       Ovde postoji sloboda u tome gde će biti smešteni podaci iz memorije koji se mapiraju na isti indeks.
+
+    *   Set-Associative Mapping:
+            Ovo je hibrid između direktnog mapiranja i asocijativnog mapiranja.
+    *       Keš je podeljen na skupove (sets), a svaki set sadrži određeni broj linija keša.
+
+    *   Svaka adresa iz memorije može biti smeštena u bilo koju liniju unutar određenog seta.
+    *   U slučaju vašeg koda, associativities je niz koji sadrži informacije o tome koliko je svaki nivo keša asocijativan.
+    *   Na primer, ako je asocijativnost za L1, L2 i L3 postavljena na 2, 4 i 8 redom,
+    *   to znači da su ovi nivoi keša dvostruko, četvorostruko, odnosno osmostruko asocijativni.
+    *   Ovo određuje koliko linija keša može držati podatke koji se mapiraju na isti indeks.
+    *   Veća asocijativnost obično dovodi do manje verovatnoće sukoba (conflict) i bolje iskorišćenosti keša,
+    *   ali takođe zahteva više resursa.
+    * */
+    private int[] associativities;
     private int cacheLineSize;         // Cache line size
+    private int cacheHits = 0;          //  counter for the number of cache hits
+    private int cacheMisses = 0;        //  counter for the number of cache misses
+    private Memory memory;              // Reference to the Memory instance
 
-    // Counters for cache hits and misses
-    private int cacheHits = 0;
-    private int cacheMisses = 0;
-    // private int cacheMissesTimes=0; // pa + cacheHits = cacheAccesses
-
-    // Reference to the Memory instance
-    private Memory memory;
-
-    // Constructor to initialize Memory instance
+    // Constructor to initialize Memory instance --lakrdija koju treba eliminisati!!
     public Cache(Memory memory) {
         this.memory = memory;
         initializeCaches();
     }
 
+    //  Constructor
     public Cache(Memory memory, int numCacheLevels, int[] cacheSizes, int[] associativities, int cacheLineSize) {
         this.memory = memory;
         this.numCacheLevels = numCacheLevels;
@@ -85,73 +123,171 @@ public class Cache {
     }
     */
 
+    /*
+     Ova metoda initializeCaches() ima zadatak da inicijalizuje nivoe keša na osnovu specificiranih parametara.
+     Za svaki nivo keša, kreira keš određene veličine i asocijativnosti, inicijalizuje ga sa  linijama keša i dodaje ga na listu keš nivoa.
+     Iteracija kroz nivoe keša:
+     Petlja for prolazi kroz svaki nivo keša.
+     Dohvatanje veličine i asocijativnosti:
+     Za svaki nivo keša, dohvaćaju se veličina keša i asocijativnost iz odgovarajućih nizova cacheSizes i associativities.
+     Kreiranje novog keša: Na osnovu veličine keša,
+     kreira se novi keš koristeći LRU strategiju zamene (Least Recently Used) kako bi se osiguralo optimalno upravljanje kešom.
+     Inicijalizacija nivoa keša: Poziva se metoda initializeCacheLevel() kako bi se inicijalizovao nivo keša sa linijama keša.
+     Dodavanje keša u listu: Inicijalizovani keš se dodaje u listu cacheLevels koja sadrži sve nivoe keša.
+    */
+    /**
+     * Initializes the cache levels based on the specified parameters.
+     * For each cache level, creates a cache with the given size and associativity,
+     * initializes it with cache lines, and adds it to the list of cache levels.
+     */
     private void initializeCaches() {
+        // Iterate over each cache level
         for (int i = 0; i < numCacheLevels; i++) {
+            // Retrieve cache size and associativity for the current level
             int cacheSize = cacheSizes[i];
             int associativity = associativities[i];
+
+            // Create a new LRU cache with the specified size for the current level
             Map<Long, CacheLevel> cache = new LruCache<>(cacheSize);
+
+            // Initialize the cache level with cache lines
             initializeCacheLevel(cache, cacheSize, associativity);
+
+            // Add the initialized cache to the list of cache levels
             cacheLevels.add(cache);
         }
     }
 
+    /**
+     * Initializes a cache level with cache lines based on the specified cache size and associativity.
+     * Creates cache lines within the cache map using sequential indices as keys.
+     *
+     * @param cache         The cache map to initialize.
+     * @param cacheSize     The size of the cache level in bytes.
+     * @param associativity The associativity of the cache level, indicating how many cache lines can hold data mapped to the same index.
+     */
     private void initializeCacheLevel(Map<Long, CacheLevel> cache, int cacheSize, int associativity) {
+        // Calculate the number of cache lines based on the cache size and line size
         int numCacheLines = cacheSize / CACHE_LINE_SIZE;
+
+        // Create cache lines within the cache map using sequential indices as keys
         for (long j = 0; j < numCacheLines; j++) {
+            // Each cache line is represented by an instance of CacheLevel
             cache.put(j, new CacheLevel());
         }
     }
 
-    // Method to read from cache
+    /**
+     * Reads data from the cache at the specified address.
+     * If the data is present in the cache (cache hit), it is returned.
+     * If the data is not present in the cache (cache miss), it is read from RAM,
+     * updated in the cache, and then returned.
+     *
+     * @param address The memory address to read from.
+     * @return The data read from the cache or RAM.
+     */
     public byte readFromCache(long address) {
+        // Get the cache level corresponding to the address
         CacheLevel cacheLevel = getCacheLevel(address);
+
+        // Check if the cache level is not null (cache hit)
         if (cacheLevel != null) {
             try {
+                // Read data from the cache level
                 byte data = cacheLevel.read(address);
+
+                // If data is read from the cache (cache hit)
                 if (data != 0) {
-                    cacheHits++;
-                    System.out.println(cacheHits);
+                    cacheHits++; // Increment cache hits counter
+                    System.out.println(cacheHits); // Print cache hits count
                 } else {
-                    System.out.println(cacheMisses);
+                    System.out.println(cacheMisses); // Print cache misses count
                 }
+
+                // Print cache hit message with the retrieved data
                 System.out.println("Cache Hit!! Data: " + data);
-                return data;
+                return data; // Return the data read from the cache
             } catch (IllegalStateException e) {
+                // Handle any exceptions thrown during cache read
                 System.err.println("Exception caught: " + e.getMessage());
-                return 0;
+                return 0; // Return default value (0) if an exception occurs
             }
         }
 
+        // If cache level is null (cache miss)
         System.out.println("cacheLevel = 0");
-        cacheMisses++;
-        // If cache miss, read from RAM and update caches
+        cacheMisses++; // Increment cache misses counter
+
+        // Read data from RAM
         byte[] dataFromRAM = readFromRAM(address);
         String str = "";
-        for(byte s: dataFromRAM){
+        // Convert the data read from RAM to string for printing
+        for (byte s : dataFromRAM) {
             str += s;
             str += " ";
         }
-        System.out.println("Cache Miss!! Data read From RAM: " + str);
+        System.out.println("Cache Miss!! Data read From RAM: " + str); // Print cache miss message with data from RAM
+
+        // Update caches with data read from RAM
         updateCaches(address, dataFromRAM);
+
+        // Return the data read from RAM
         return dataFromRAM[getOffset(address)];
     }
+    /*
+    * Ova metoda readFromCache() čita podatke iz keša na određenoj adresi.
+    * Ako su podaci prisutni u kešu (pogodak u kešu), oni se vraćaju.
+    * Ako podaci nisu prisutni u kešu (promašaj u kešu), čitaju se iz RAM-a, a zatim se ažuriraju u kešu i vraćaju.
+    * Parametar metode:
+    * address: Adresa memorije s koje se čita.
+    * Čitanje iz keša:
+    * Dobija se nivo keša koji odgovara adresi.
+    * Proverava se da li je nivo keša različit od null (pogodak u kešu).
+    * Ako je nivo keša različit od null, podaci se čitaju iz tog nivoa.
+    * Ako su podaci pročitani iz keša (pogodak u kešu),
+    * brojač pogodaka keša se povećava, a zatim se prikazuju informacije o pogotku keša i vraćaju se pročitani podaci.
+    * Ako dođe do izuzetka prilikom čitanja iz keša, hvata se izuzetak i vraća se podrazumevana vrednost (0).
+    * Promašaj u kešu:
+    * Ako je nivo keša jednak null (promašaj u kešu), povećava se brojač promašaja keša.
+    * Podaci se čitaju iz RAM-a na osnovu adrese.
+    * Prikazuju se informacije o promašaju keša i podaci se ažuriraju u kešu sa podacima pročitanim iz RAM-a.
+    * Vraća se pročitani podatak iz RAM-a.
+    * */
 
-    // Method to write to cache
+    /**
+     * Writes data to the cache at the specified address.
+     * If the data is present in the cache (cache hit), it is updated with the new data.
+     * If the data is not present in the cache (cache miss), it is written to RAM and then updated in the cache.
+     *
+     * @param address The memory address to write to.
+     * @param data    The data to write.
+     */
     public void writeToCache(long address, byte data) {
-        System.out.println("Write to Cache <address,data>: " + "<" + address + "," + data + ">");
+        System.out.println("Write to Cache <address,data>: " + "<" + address + "," + data + ">"); // Print message indicating write to cache
+
+        // Get the cache level corresponding to the address
         CacheLevel cacheLevel = getCacheLevel(address);
+
+        // Check if the cache level is not null (cache hit)
         if (cacheLevel != null) {
-            System.out.println("cacheLevel != 0");
-            System.out.println("Cache Hit!! Data: " + data);
-            cacheLevel.write(address, data);
+            System.out.println("cacheLevel != 0"); // Print message indicating cache hit
+            System.out.println("Cache Hit!! Data: " + data); // Print message indicating cache hit with data
+            cacheLevel.write(address, data); // Write data to the cache level
+            cacheHits++; // Increment cache hits counter
+        } else {
+            // If cache level is null (cache miss), print message indicating cache miss
+            System.out.println("cacheLevel = 0");
+
+            // Write data to RAM
+            writeToRAM(address, data);
+
+            // Update caches with data written to RAM
+            updateCaches(address, new byte[]{data});
+
+            // Increment both cache hits and misses counters
             cacheHits++;
+            cacheMisses++;
         }
-        // If cache miss, write to RAM and update caches
-        System.out.println("cacheLevel = 0");
-        writeToRAM(address, data);
-        updateCaches(address, new byte[]{data});
-        cacheHits++;
-        cacheMisses++;
     }
 
     // Method to get cache hit percentage
@@ -212,6 +348,20 @@ public class Cache {
     }
 
     // Method to update caches after a cache miss
+
+    public void updateCaches(long address, byte[] data) {
+        System.out.println("Method: updateCaches");
+        // Assuming LRU strategy for simplicity
+        CacheLevel cacheLevel = getCacheLevel(address);
+        if (cacheLevel != null) {
+            cacheLevel.write(address, data[0]);
+            cacheHits++; // Ovde je bio problem, jer se cacheHits povećavao iako je došlo do promašaja u kešu
+        } else {
+            cacheMisses++; // Ovde je ispravno povećati brojač promašaja u kešu
+        }
+    }
+
+    /*
     private void updateCaches(long address, byte[] data) {
         System.out.println("Method: updateCaches");
         // Assuming LRU strategy for simplicity
@@ -221,6 +371,7 @@ public class Cache {
             cacheHits++;
         }
     }
+    */
 
     // Method to get the index from the address
     private long getIndex(long address) {
@@ -369,4 +520,12 @@ public class Cache {
                  //", memory=" + memory +
                 '}';
         }*/
+
+    public int getCacheHits(){
+        return this.cacheHits;
+    }
+
+    public int getCacheMisses(){
+        return this.cacheMisses;
+    }
 }

@@ -5,43 +5,74 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Memory {
+    
     private static Map<Long, MemoryPage> pageTableLevel4 = new HashMap<>(); // prebaci je na 'static' 15.02.2024
 
+    // Constuctor
     public Memory() {
         initializeMemory();
     }
 
-    private void initializeMemory() {
-        // Dodajte inicijalne stranice u mapu   15.02.2024
+    /**
+     * Inicijalizuje memoriju dodajući početne stranice u mapu stranica.
+     * Svaka stranica ima svoj indeks koji se dodjeljuje automatski.
+     * Metoda se obično poziva prilikom inicijalizacije objekta klase Memory.
+     */
+    public void initializeMemory() {
+        // Dodajte inicijalne stranice u mapu
         for (long i = 0; i < 512; i++) {
             pageTableLevel4.put(i, new MemoryPage(i));
         }
     }
 
-    // Public method to read from a virtual address
+    // Vrši čitanje bajta iz memorije na osnovu virtuelne adrese.
+    // Ako je virtuelna adresa validna, izvršava čitanje na odgovarajućoj fizičkoj adresi i vraća pročitani bajt.
+    // Ako virtuelna adresa nije validna ili se ne može prevesti u fizičku adresu, vraća se nula.
+    // @param virtualAddress Virtuelna adresa sa koje se čita bajt.
+    // @return Pročitani bajt iz memorije, ili 0 ako se virtuelna adresa ne može prevesti.
     public byte readFromVirtualAddress(long virtualAddress) {
+
         MemoryPage page = translateVirtualToPhysical(virtualAddress);
+
+        // Ako je stranica pronađena
         if (page != null) {
+            // Izračunaj offset unutar stranice
             int offset = getOffset(virtualAddress);
+            // Ispisuje informacije o čitanju
             System.out.println("Reading from page: " + page.getIndex() + " at offset: " + offset);
-            return page.read(offset);   // Čitanje podataka iz fizičke memorije: pristupanje stranici s indeksom dobijenim iz virtuelne adrese, te čitanje podataka s određenog offseta unutar te stranice.
+            // Vrši čitanje sa odgovarajuće fizičke adrese i vraća pročitani bajt
+            return page.read(offset); 
         }
-        return 0; // Placeholder, replace with actual implementation
+        // Vraća nulu ako virtuelna adresa nije validna ili se ne može prevesti
+        return 0; // Placeholder, replace with actual implementation!?
     }
 
-    // Public method to write to a virtual address | 15.02.2024
+    /**
+     * Vrši upisivanje podataka na određenu virtuelnu adresu u memoriju.
+     *
+     * @param virtualAddress Virtuelna adresa na koju se vrši upisivanje podataka.
+     * @param data Podaci koji se upisuju na navedenu virtuelnu adresu.
+     */
     public void writeToVirtualAddress(long virtualAddress, byte data) {
+        // Prevedi virtuelnu adresu u odgovarajuću fizičku adresu
         MemoryPage page = translateVirtualToPhysical(virtualAddress);
+        // Ispisuje informacije o stranici dobijenoj iz prevođenja virtuelne adrese u fizičku (za praćenje)
         System.out.println("Page(translateVirtualToPhysical): " + page);
+
+        // Proveri da li je stranica pronađena
         if (page != null) {
+            // Izračunaj offset unutar stranice
             int offset = getOffset(virtualAddress);
+            // Ispisuje informacije o offsetu (za praćenje)
             System.out.println("offset" + offset);
+            // Upisuje podatke na odgovarajuću fizičku adresu unutar stranice
             page.write(offset, data);
         }
     }
 
     // Method to translate virtual address to physical address using a hierarchical structure
     public MemoryPage translateVirtualToPhysical(long virtualAddress) {
+
         long level4Index = (virtualAddress >> 39) & 0x1FF;
         long level3Index = (virtualAddress >> 30) & 0x1FF;
         long level2Index = (virtualAddress >> 21) & 0x1FF;
@@ -85,14 +116,23 @@ public class Memory {
     }
 
     // Method to get the offset from a virtual address
+    /**
+     * Izračunava offset unutar stranice na osnovu virtuelne adrese.
+     * Offset predstavlja poziciju podataka unutar stranice i koristi se za precizno adresiranje.
+     *
+     * @param virtualAddress Virtuelna adresa čiji se offset računa.
+     * @return Offset unutar stranice, predstavljen kao ceo broj.
+     */
     public int getOffset(long virtualAddress) {
+        // Primena bitovskog AND operatora sa 0xFFF izdvaja poslednjih 12 bitova, što predstavlja offset unutar stranice.
+        // Ovo omogućava precizno adresiranje podataka unutar stranice.
         return (int) (virtualAddress & 0xFFF);
     }
 
     // Class representing a memory page
     public static class MemoryPage {
-        private byte[] data = new byte[4096];
-        private long index; // New field to store the index
+        private byte[] data = new byte[4096];   //  krupno zrno
+        private long index;                     // New field to store the index
 
         public MemoryPage(long index) {
             this.index = index;
@@ -122,16 +162,6 @@ public class Memory {
             return index;
         }
     }
-    /*
-    * jednostavna (pod)klasa za reprezentaciju bloka fizičke memorije
-    * instanca te klase jeste memorijska stranica tj. blok RAM memorije veličine 4096[B] ili ti 4[kB]
-    * te kroz te bajtove se prolazi koristenjem indeksa..
-    * */
-    /*
-     * U klasi `Memory.java`, virtuelne adrese se implicitno čuvaju u metodama koje vrše mapiranje virtuelnih adresa na fizičke adrese. Nije eksplicitno potrebno čuvati sve virtuelne adrese, jer su adrese dinamičke i mogu zauzeti veliki prostor.
-     * Mapiranje virtuelnih adresa na fizičke adrese obavlja se putem hijerarhijske strukture stranica (page table). U metodi `translateVirtualToPhysical`, virtuelna adresa se rastavlja na četiri nivoa (level4, level3, level2, level1), a zatim se koristi ova hijerarhija da bi se pronašla odgovarajuća fizička adresa. Praktično, virtuelne adrese se ne čuvaju eksplicitno u obliku liste ili mape, već se dinamički obrađuju kako bi se pronašle odgovarajuće fizičke adrese prilikom pristupa memoriji.
-     * Dakle, u klasi `Memory.java`, virtuelne adrese se obrađuju i koriste dinamički, a ne čuvaju se eksplicitno, jer hijerarhijska struktura stranica omogućava dinamičko mapiranje virtuelnih adresa na fizičke adrese tokom izvršavanja programa.
-     * */
 
     @Override
     public String toString() {

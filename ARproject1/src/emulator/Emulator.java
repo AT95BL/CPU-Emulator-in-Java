@@ -14,6 +14,12 @@ public class Emulator {
             // Dohvati instrukciju iz memorije
             long instruction = processor.fetchInstructionFromMemory(processor.getProgramCounter());
 
+            try{
+                Thread.sleep(1000);
+            }catch (InterruptedException ex){
+                ex.printStackTrace();
+            }
+
             // Dekodiraj instrukciju
             long decodedInstruction = processor.decodeInstruction(instruction);
 

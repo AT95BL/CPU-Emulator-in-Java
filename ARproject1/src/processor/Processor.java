@@ -8,6 +8,9 @@ import java.io.FileNotFoundException;
 
 public class Processor{
     private static final int NUM_GENERAL_PURPOSE_REGISTERS = 4;
+    public int getNUM_GENERAL_PURPOSE_REGISTERS(){
+        return NUM_GENERAL_PURPOSE_REGISTERS;
+    }
     public  long[] generalPurposeRegisters; // 64-bit general-purpose registers
     private long programCounter; // 64-bit program counter
     private Cache cache;
@@ -445,6 +448,9 @@ public class Processor{
     public void setZeroFlag(boolean zeroFlag){
         this.zeroFlag = zeroFlag;
     }
+    public boolean getZeroFlag(){
+        return this.zeroFlag;
+    }
 
     public boolean isZeroFlag(){
         return this.zeroFlag;
@@ -461,6 +467,9 @@ public class Processor{
         this.greaterThanFlag = greaterThanFlag;
     }
 
+    public boolean getGreaterThanFlag(){
+        return this.greaterThanFlag;
+    }
     public boolean isGreaterThanFlag(){
         return this.greaterThanFlag;
     }

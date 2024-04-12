@@ -79,6 +79,32 @@ public class CacheTest {
                 "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " +
                 "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}";
     }
+
+    /*
+    @Test
+    public void testLRUCacheReplacementAlgorithm() {
+        Memory memory = new Memory(); // Prilagodite veličinu memorije prema potrebi
+        Cache cache = new Cache(memory);
+
+        // Simuliramo niz pristupa memoriji
+        long[] memoryAccesses = {0x100, 0x200, 0x300, 0x100, 0x400, 0x500, 0x200, 0x600, 0x100};
+
+        // Izvršavamo pristupe memoriji preko keša
+        for (long address : memoryAccesses) {
+            cache.readFromCache(address);
+        }
+
+        // Proveravamo da li su cache hits i cache misses tačni
+        assertEquals(3, cache.getCacheHits());
+        assertEquals(6, cache.getCacheMisses());
+
+        String expectedCacheState = "Cache{l1Cache={0=CacheLevel{cacheLines={0=CacheLine{data=[128, " +
+                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " +
+                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " +
+                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " +
+                "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}";
+    }
+    */
 }
 /*
 * Rezultat se poklapa sa očekivanim zato što si u tvojim JUnit testovima precizno definisao korake koje želiš testirati,
