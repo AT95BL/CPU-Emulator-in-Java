@@ -1,8 +1,5 @@
----
+# Processor Architecture Emulator    
 
-# Processor Architecture Emulator  
-
-**Arhitektura računara**  
 **Project Assignment #1 – Processor Architecture**  
 
 This project implements an **emulator for a custom processor architecture**, adhering to principles of **object-oriented programming (OOP)**, **SOLID principles**, 
